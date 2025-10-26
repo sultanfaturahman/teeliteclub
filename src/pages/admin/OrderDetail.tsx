@@ -14,6 +14,7 @@ import { ArrowLeft, Package, Truck, CheckCircle, Clock, AlertCircle, User, MapPi
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { formatPaymentMethod } from "@/utils/payment";
 
 interface OrderItem {
   id: string;
@@ -531,7 +532,7 @@ const OrderDetail = () => {
               <CardContent className="space-y-3">
                 <div>
                   <p className="text-sm text-muted-foreground">Method</p>
-                  <p className="font-medium capitalize">{order.payment_method}</p>
+                  <p className="font-medium">{formatPaymentMethod(order.payment_method)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Order Date</p>

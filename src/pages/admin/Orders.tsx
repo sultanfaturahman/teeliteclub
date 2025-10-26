@@ -11,6 +11,7 @@ import { Eye, Search, Package, Truck, CheckCircle, Clock, AlertCircle } from "lu
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { formatPaymentMethod } from "@/utils/payment";
 
 interface Order {
   id: string;
@@ -256,7 +257,7 @@ const Orders = () => {
                           {order.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>{order.payment_method}</TableCell>
+                      <TableCell>{formatPaymentMethod(order.payment_method)}</TableCell>
                       <TableCell>{formatDate(order.created_at)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">

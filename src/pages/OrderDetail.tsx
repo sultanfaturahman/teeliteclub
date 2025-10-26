@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Footer } from "@/components/layout/Footer";
 import { OrderDetailSkeleton } from "@/components/loading/OrdersSkeleton";
 import { toast as sonnerToast } from "sonner";
+import { formatPaymentMethod } from "@/utils/payment";
 
 interface OrderItem {
   id: string;
@@ -552,7 +553,7 @@ const OrderDetail = () => {
                 <CardContent className="space-y-3">
                   <div>
                     <p className="text-sm text-muted-foreground">Metode</p>
-                    <p className="font-medium capitalize">{order.payment_method}</p>
+                    <p className="font-medium">{formatPaymentMethod(order.payment_method)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Tanggal Pesanan</p>

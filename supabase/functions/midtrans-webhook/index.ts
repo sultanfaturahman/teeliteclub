@@ -10,6 +10,11 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 };
 
+interface MidtransVANumber {
+  bank?: string;
+  va_number?: string;
+}
+
 interface MidtransNotification {
   order_id: string;
   status_code: string;
@@ -17,6 +22,15 @@ interface MidtransNotification {
   signature_key: string;
   transaction_status: string;
   fraud_status?: string;
+  payment_type?: string;
+  va_numbers?: MidtransVANumber[];
+  permata_va_number?: string;
+  biller_code?: string;
+  bank?: string;
+  masked_card?: string;
+  card_type?: string;
+  store?: string;
+  payment_code?: string;
 }
 
 // Function to verify Midtrans signature
@@ -38,6 +52,73 @@ async function verifySignature(notification: MidtransNotification, serverKey: st
     console.error('Error verifying signature:', error);
     return false;
   }
+}
+
+function getPaymentMethodLabel(notification: MidtransNotification): string | undefined {
+  const rawType = notification.payment_type?.toLowerCase();
+  if (!rawType) {
+    return undefined;
+  }
+
+  const paymentTypeMap: Record<string, string> = {
+    gopay: 'GoPay',
+    qris: 'QRIS',
+    shopeepay: 'ShopeePay',
+    credit_card: 'Kartu Kredit/Debit',
+    akulaku: 'Akulaku',
+    kredivo: 'Kredivo',
+    alfamart: 'Alfamart',
+    indomaret: 'Indomaret',
+    echannel: 'Mandiri Bill Payment',
+    bri_epay: 'BRI ePay',
+    bca_klikpay: 'BCA KlikPay',
+    cimb_clicks: 'CIMB Clicks',
+    danamon_online: 'Danamon Online',
+    uob_ezpay: 'UOB EZPay'
+  };
+
+  if (rawType === 'bank_transfer') {
+    const vaNumbers = Array.isArray(notification.va_numbers) ? notification.va_numbers : [];
+    const bankName = vaNumbers[0]?.bank || notification.bank;
+    if (bankName) {
+      return `Bank Transfer (${bankName.toUpperCase()})`;
+    }
+    if (notification.permata_va_number) {
+      return 'Bank Transfer (Permata)';
+    }
+    if (notification.biller_code) {
+      return 'Bank Transfer (Mandiri)';
+    }
+    return 'Bank Transfer';
+  }
+
+  if (rawType === 'echannel') {
+    return 'Mandiri Bill Payment';
+  }
+
+  if (rawType === 'cstore') {
+    const storeName = notification.store?.toLowerCase();
+    if (storeName === 'indomaret') {
+      return 'Indomaret';
+    }
+    if (storeName === 'alfamart') {
+      return 'Alfamart';
+    }
+    if (storeName) {
+      return storeName.charAt(0).toUpperCase() + storeName.slice(1);
+    }
+    return 'Convenience Store';
+  }
+
+  const mapped = paymentTypeMap[rawType];
+  if (mapped) {
+    return mapped;
+  }
+
+  return rawType
+    .split('_')
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ');
 }
 
 serve(async (req: Request) => {
@@ -97,6 +178,9 @@ serve(async (req: Request) => {
     const orderId = notification.order_id;
     const transactionStatus = notification.transaction_status;
     const fraudStatus = notification.fraud_status;
+    const detectedPaymentMethod = getPaymentMethodLabel(notification);
+
+    console.log('Detected payment method:', detectedPaymentMethod || notification.payment_type || 'unknown');
 
     let orderStatus = 'pending';
 
@@ -118,41 +202,67 @@ serve(async (req: Request) => {
     // Get order data first
     const { data: orderData, error: orderError } = await supabaseService
       .from('orders')
-      .select('id, total, status')
+      .select('id, total, status, payment_method')
       .eq('order_number', orderId)
       .single();
 
     if (orderError) {
-      console.error('Error fetching order:', orderError);
-      return new Response(JSON.stringify({ 
-        error: 'Order not found',
-        order_id: orderId 
+      console.warn('Order not found for incoming notification:', orderId, orderError);
+      return new Response(JSON.stringify({
+        status: 'ignored',
+        reason: 'order_not_found',
+        order_id: orderId
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 404,
+        status: 200,
       });
     }
 
-    // Validate payment amount against stored order total
-    const expectedAmount = orderData.total.toString();
-    if (notification.gross_amount !== expectedAmount) {
-      console.error(`Amount mismatch: expected ${expectedAmount}, received ${notification.gross_amount}`);
+    // Validate payment amount against stored order total using numeric comparison
+    const expectedAmount = Number(orderData.total);
+    const receivedAmount = Number(notification.gross_amount);
+
+    if (!Number.isFinite(expectedAmount) || !Number.isFinite(receivedAmount)) {
+      console.error(`Invalid amount values provided. expected=${orderData.total}, received=${notification.gross_amount}`);
+      return new Response(JSON.stringify({
+        status: 'ignored',
+        reason: 'invalid_amount',
+        order_id: orderId
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
+
+    // Use a tolerance check to account for formatting differences (e.g. 100000 vs 100000.00)
+    const amountDifference = Math.abs(receivedAmount - expectedAmount);
+    if (amountDifference > 0.0001) {
+      console.error(`Amount mismatch: expected ${expectedAmount}, received ${receivedAmount}`);
       return new Response(JSON.stringify({ 
-        error: 'Payment amount validation failed',
+        status: 'ignored',
+        reason: 'amount_mismatch',
         order_id: orderId 
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 200,
       });
     }
 
     // Update order status in database
+    const paymentMethodToStore = detectedPaymentMethod || orderData.payment_method || null;
+
+    const orderUpdates: Record<string, unknown> = {
+      status: orderStatus,
+      updated_at: new Date().toISOString()
+    };
+
+    if (paymentMethodToStore) {
+      orderUpdates.payment_method = paymentMethodToStore;
+    }
+
     const { error: updateError } = await supabaseService
       .from('orders')
-      .update({
-        status: orderStatus,
-        updated_at: new Date().toISOString()
-      })
+      .update(orderUpdates)
       .eq('order_number', orderId);
 
     if (updateError) {

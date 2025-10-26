@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { Footer } from "@/components/layout/Footer";
 import { OrdersSkeleton } from "@/components/loading/OrdersSkeleton";
 import { cn } from "@/lib/utils";
+import { formatPaymentMethod } from "@/utils/payment";
 
 interface OrderItem {
   id: string;
@@ -377,7 +378,7 @@ const Orders = () => {
                         </span>
                         <span className="inline-flex items-center gap-2 rounded-full bg-background/70 px-3 py-1 text-xs sm:text-sm">
                           <CreditCard className="h-4 w-4" />
-                          <span className="capitalize">{order.payment_method}</span>
+                          <span className="font-medium">{formatPaymentMethod(order.payment_method)}</span>
                         </span>
                         <span className="inline-flex items-center gap-2 rounded-full bg-background/70 px-3 py-1 text-xs sm:text-sm">
                           <Truck className="h-4 w-4" />
@@ -515,7 +516,7 @@ const Orders = () => {
                             <div className="mt-3 space-y-3 text-foreground">
                               <div className="flex items-center gap-2 text-sm">
                                 <CreditCard className="h-4 w-4 text-muted-foreground" />
-                                <span className="capitalize">{order.payment_method}</span>
+                                <span className="font-medium">{formatPaymentMethod(order.payment_method)}</span>
                               </div>
                               <div className="flex items-center gap-2 text-sm">
                                 <Truck className="h-4 w-4 text-muted-foreground" />
