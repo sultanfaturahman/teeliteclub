@@ -38,17 +38,18 @@ const FinishPayment = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+
+  // URL parameters (defined before state usage to avoid TDZ issues)
+  const orderId = searchParams.get('order_id');
+  const transactionStatus = searchParams.get('transaction_status');
+  const statusCode = searchParams.get('status_code');
+
   const [loading, setLoading] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [changeMethodLoading, setChangeMethodLoading] = useState(false);
   const [activeMidtransOrderId, setActiveMidtransOrderId] = useState<string | null>(orderId);
-
-  // Get parameters from URL
-  const orderId = searchParams.get('order_id');
-  const transactionStatus = searchParams.get('transaction_status');
-  const statusCode = searchParams.get('status_code');
 
   useEffect(() => {
     if (orderId) {
