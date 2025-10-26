@@ -6,12 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-<<<<<<< HEAD
-import { ArrowLeft, Package, Calendar, CreditCard, Truck, ChevronDown, ChevronUp, RefreshCw, Eye, ExternalLink } from "lucide-react";
-import { toast } from "sonner";
-import { Footer } from "@/components/layout/Footer";
-import { OrdersSkeleton } from "@/components/loading/OrdersSkeleton";
-=======
 import {
   ArrowLeft,
   Package,
@@ -29,7 +23,6 @@ import { toast } from "sonner";
 import { Footer } from "@/components/layout/Footer";
 import { OrdersSkeleton } from "@/components/loading/OrdersSkeleton";
 import { cn } from "@/lib/utils";
->>>>>>> c78eca0 (Update Maintenance)
 
 interface OrderItem {
   id: string;
@@ -60,8 +53,6 @@ interface Order {
   order_items: OrderItem[];
 }
 
-<<<<<<< HEAD
-=======
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   pending: {
     label: 'Menunggu Pembayaran',
@@ -93,7 +84,6 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   }
 };
 
->>>>>>> c78eca0 (Update Maintenance)
 const Orders = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -121,26 +111,6 @@ const Orders = () => {
   };
 
   const getStatusBadge = (status: string) => {
-<<<<<<< HEAD
-    switch (status) {
-      case 'pending':
-        return <Badge variant="secondary">Menunggu Pembayaran</Badge>;
-      case 'paid':
-        return <Badge variant="default">Dibayar</Badge>;
-      case 'processing':
-        return <Badge variant="outline">Diproses</Badge>;
-      case 'shipped':
-        return <Badge variant="outline">Dikirim</Badge>;
-      case 'delivered':
-        return <Badge variant="default">Selesai</Badge>;
-      case 'cancelled':
-        return <Badge variant="destructive">Dibatalkan</Badge>;
-      case 'failed':
-        return <Badge variant="destructive">Gagal</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-=======
     const config = STATUS_CONFIG[status] ?? {
       label: status,
       className: 'bg-muted text-foreground'
@@ -156,7 +126,6 @@ const Orders = () => {
         {config.label}
       </Badge>
     );
->>>>>>> c78eca0 (Update Maintenance)
   };
 
   const toggleOrderDetails = (orderId: string) => {
@@ -329,54 +298,6 @@ const Orders = () => {
   }
 
   return (
-<<<<<<< HEAD
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate('/')}
-          className="mb-6"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Kembali ke Beranda
-        </Button>
-
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Package className="h-6 w-6" />
-            <h1 className="text-2xl font-bold">Riwayat Pesanan</h1>
-          </div>
-          <Button 
-            variant="outline" 
-            onClick={fetchOrders}
-            disabled={loading}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
-
-        {orders.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h2 className="text-xl font-semibold mb-2">Belum Ada Pesanan</h2>
-              <p className="text-muted-foreground mb-4">
-                Anda belum pernah melakukan pemesanan
-              </p>
-              <Button onClick={() => navigate('/shop')}>
-                Mulai Belanja
-              </Button>
-              
-              {/* Debug info when no orders */}
-              <div className="mt-4 p-4 bg-gray-100 rounded text-sm text-left">
-                <h3 className="font-semibold mb-2">Debug Info:</h3>
-                <p><strong>User ID:</strong> {user?.id}</p>
-                <p><strong>Loading:</strong> {loading ? 'Yes' : 'No'}</p>
-                <p><strong>Query completed:</strong> Yes</p>
-              </div>
-=======
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto max-w-5xl px-4 py-10 sm:py-12">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -434,32 +355,11 @@ const Orders = () => {
               <Button onClick={() => navigate('/shop')} className="w-full rounded-full px-6 sm:w-auto">
                 Mulai Belanja
               </Button>
->>>>>>> c78eca0 (Update Maintenance)
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-6">
             {orders.map((order) => (
-<<<<<<< HEAD
-              <Card key={order.id}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-lg">
-                        Pesanan #{order.order_number}
-                      </CardTitle>
-                      <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4" />
-                        {formatDate(order.created_at)}
-                      </div>
-                    </div>
-                    <div className="text-right space-y-2">
-                      {getStatusBadge(order.status)}
-                      <div className="text-lg font-semibold">
-                        {formatPrice(order.total)}
-                      </div>
-                      {/* Continue Payment Button for pending orders */}
-=======
               <Card key={order.id} className="overflow-hidden rounded-2xl border border-border/60 shadow-sm sm:rounded-3xl">
                 <CardHeader className="space-y-4 border-b border-border/60 bg-muted/30 px-5 py-5 sm:px-6 sm:py-6">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -490,16 +390,11 @@ const Orders = () => {
                       <div className="text-xl font-semibold text-foreground sm:text-2xl">
                         {formatPrice(order.total)}
                       </div>
->>>>>>> c78eca0 (Update Maintenance)
                       {order.status === 'pending' && (
                         <Button
                           size="sm"
                           onClick={() => handleContinuePayment(order.payment_url || null, order.order_number, order.id)}
-<<<<<<< HEAD
-                          className="w-full flex items-center gap-2"
-=======
                           className="flex w-full items-center justify-center gap-2 rounded-full px-4 sm:w-auto"
->>>>>>> c78eca0 (Update Maintenance)
                           variant={order.payment_url ? "default" : "outline"}
                         >
                           <ExternalLink className="h-4 w-4" />
@@ -509,18 +404,6 @@ const Orders = () => {
                     </div>
                   </div>
                 </CardHeader>
-<<<<<<< HEAD
-                <CardContent>
-                  <div className="space-y-4">
-                    {/* Order Summary - Always visible */}
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          {order.order_items.length} produk
-                        </span>
-                      </div>
-=======
                 <CardContent className="space-y-6 px-5 py-6 sm:px-6">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground sm:text-sm">
@@ -536,37 +419,23 @@ const Orders = () => {
                       )}
                     </div>
                     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
->>>>>>> c78eca0 (Update Maintenance)
                       <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => navigate(`/orders/${order.id}`)}
-<<<<<<< HEAD
-                          className="flex items-center gap-2"
-                        >
-                          <Eye className="h-4 w-4" />
-                          Lihat Detail
-=======
                           className="flex w-full items-center justify-center gap-2 rounded-full border-border/70 sm:w-auto"
                         >
                           <Eye className="h-4 w-4" />
                           Detail Lengkap
->>>>>>> c78eca0 (Update Maintenance)
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => toggleOrderDetails(order.id)}
-<<<<<<< HEAD
-                          className="flex items-center gap-2"
-                        >
-                          {expandedOrders.has(order.id) ? 'Sembunyikan' : 'Lihat Ringkasan'}
-=======
                           className="flex w-full items-center justify-center gap-2 rounded-full px-4 sm:w-auto"
                         >
                           {expandedOrders.has(order.id) ? 'Sembunyikan Ringkasan' : 'Lihat Ringkasan'}
->>>>>>> c78eca0 (Update Maintenance)
                           {expandedOrders.has(order.id) ? (
                             <ChevronUp className="h-4 w-4" />
                           ) : (
@@ -576,30 +445,6 @@ const Orders = () => {
                       </div>
                     </div>
 
-<<<<<<< HEAD
-                    {/* Expanded Details */}
-                    {expandedOrders.has(order.id) && (
-                      <>
-                        <Separator />
-                        
-                        {/* Order Items */}
-                        <div>
-                          <h4 className="font-semibold mb-3">Produk yang Dipesan</h4>
-                          <div className="space-y-3">
-                            {order.order_items.map((item) => (
-                              <div key={item.id} className="flex justify-between items-center">
-                                <div>
-                                  <p className="font-medium">{item.product?.name || 'Produk tidak ditemukan'}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    Ukuran: {item.ukuran} • Qty: {item.jumlah}
-                                  </p>
-                                </div>
-                                <div className="text-right">
-                                  <p className="font-medium">{formatPrice(item.harga * item.jumlah)}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {formatPrice(item.harga)} × {item.jumlah}
-                                  </p>
-=======
                     {expandedOrders.has(order.id) && (
                       <div className="space-y-6">
                         <Separator />
@@ -644,7 +489,6 @@ const Orders = () => {
                                       {formatPrice(item.harga)} × {item.jumlah}
                                     </p>
                                   </div>
->>>>>>> c78eca0 (Update Maintenance)
                                 </div>
                               </div>
                             ))}
@@ -653,58 +497,6 @@ const Orders = () => {
 
                         <Separator />
 
-<<<<<<< HEAD
-                        {/* Order Details */}
-                        <div className="grid md:grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <h5 className="font-semibold mb-2">Informasi Pembeli</h5>
-                            <p><strong>Nama:</strong> {order.nama_pembeli}</p>
-                            <p><strong>Email:</strong> {order.email_pembeli}</p>
-                            <p><strong>Telepon:</strong> {order.telepon_pembeli}</p>
-                          </div>
-                          <div>
-                            <h5 className="font-semibold mb-2">Pengiriman & Pembayaran</h5>
-                            <div className="flex items-center gap-2 mb-1">
-                              <CreditCard className="h-4 w-4" />
-                              <span className="capitalize">{order.payment_method}</span>
-                            </div>
-                            <p><strong>Pengiriman:</strong> {order.shipping_method === 'express' ? 'Express' : 'Reguler'}</p>
-                            <p><strong>Alamat:</strong> {order.shipping_address}</p>
-                            
-                            {/* Display tracking number if order is shipped */}
-                            {order.status === 'shipped' && order.tracking_number && (
-                              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <Truck className="h-4 w-4 text-blue-600" />
-                                  <span className="font-semibold text-blue-600">Nomor Resi</span>
-                                </div>
-                                <p className="font-mono text-sm font-medium">{order.tracking_number}</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Gunakan nomor resi ini untuk melacak paket Anda
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Tracking number - Always visible if shipped */}
-                    {!expandedOrders.has(order.id) && order.status === 'shipped' && order.tracking_number && (
-                      <>
-                        <Separator />
-                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Truck className="h-4 w-4 text-blue-600" />
-                            <span className="font-semibold text-blue-600">Nomor Resi</span>
-                          </div>
-                          <p className="font-mono text-sm font-medium">{order.tracking_number}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Gunakan nomor resi ini untuk melacak paket Anda
-                          </p>
-                        </div>
-                      </>
-=======
                         <div className="grid gap-6 md:grid-cols-2 text-sm">
                           <div className="rounded-2xl border border-border/60 bg-card/80 p-5">
                             <h5 className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
@@ -752,7 +544,6 @@ const Orders = () => {
                           </div>
                         </div>
                       </div>
->>>>>>> c78eca0 (Update Maintenance)
                     )}
                   </div>
                 </CardContent>
@@ -767,8 +558,4 @@ const Orders = () => {
   );
 };
 
-<<<<<<< HEAD
 export default Orders;
-=======
-export default Orders;
->>>>>>> c78eca0 (Update Maintenance)

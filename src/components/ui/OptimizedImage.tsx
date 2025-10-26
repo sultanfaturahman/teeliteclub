@@ -6,7 +6,7 @@ interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> 
   alt: string;
   fallbackSrc?: string;
   className?: string;
-  onError?: (error: Event) => void;
+  onError?: React.ReactEventHandler<HTMLImageElement>;
   loading?: 'lazy' | 'eager';
 }
 
@@ -49,9 +49,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
       setHasError(true);
     }
     
-    if (onError) {
-      onError(event.nativeEvent);
-    }
+    onError?.(event);
   };
 
   // Validate and clean image URL

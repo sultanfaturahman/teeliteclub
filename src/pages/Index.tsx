@@ -5,19 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { MaintenanceCountdown } from "@/components/MaintenanceCountdown";
-<<<<<<< HEAD
-=======
 import { MaintenanceWaitlistForm } from "@/components/MaintenanceWaitlistForm";
->>>>>>> c78eca0 (Update Maintenance)
 import { MobileSafeWrapper } from "@/components/MobileSafeWrapper";
 const Index = () => {
   const [heroImage, setHeroImage] = useState("/lovable-uploads/a773ac2f-9e06-49da-a3b9-b4425905b493.png");
   const [isMaintenanceActive, setIsMaintenanceActive] = useState(false);
-<<<<<<< HEAD
-  
-  useEffect(() => {
-    loadHeroImage();
-=======
   const [maintenanceTarget, setMaintenanceTarget] = useState<string | null>(null);
   const [countdownMessage, setCountdownMessage] = useState<string | null>(null);
   const [maintenanceTitle, setMaintenanceTitle] = useState<string | null>(null);
@@ -26,7 +18,6 @@ const Index = () => {
   useEffect(() => {
     loadHeroImage();
     loadMaintenanceStatus();
->>>>>>> c78eca0 (Update Maintenance)
   }, []);
   const loadHeroImage = async () => {
     try {
@@ -41,13 +32,6 @@ const Index = () => {
       // Keep default image if loading fails
     }
   };
-<<<<<<< HEAD
-  return <div className="min-h-screen bg-background flex flex-col">
-      <Header />
-
-      {/* Hero Section */}
-      <main className="flex-1 relative overflow-hidden">
-=======
   const loadMaintenanceStatus = async () => {
     try {
       const { data, error } = await supabase
@@ -103,19 +87,12 @@ const Index = () => {
 
       {/* Hero Section */}
       <main className="relative overflow-hidden flex-1 min-h-screen">
->>>>>>> c78eca0 (Update Maintenance)
         <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{
         backgroundImage: `url(${heroImage})`
       }}>
           <div className="absolute inset-0 bg-black/40 rounded-none" />
         </div>
         <div className="relative z-10 flex items-center justify-center min-h-full">
-<<<<<<< HEAD
-          <div className="text-center text-dark-blue py-[200px]">
-            <MobileSafeWrapper 
-              fallback={
-                <Button variant="outline" size="lg" className="px-12 py-6 text-lg font-medium border-white text-white bg-transparent hover:bg-white hover:text-dark-blue animate-scale-in" asChild>
-=======
           <div
             className={`flex flex-col items-center text-center ${
               isMaintenanceActive
@@ -131,16 +108,10 @@ const Index = () => {
                   className="px-12 py-6 text-lg font-medium border-white text-white bg-transparent hover:bg-white hover:text-dark-blue animate-scale-in"
                   asChild
                 >
->>>>>>> c78eca0 (Update Maintenance)
                   <Link to="/shop">Shop Now</Link>
                 </Button>
               }
             >
-<<<<<<< HEAD
-              <MaintenanceCountdown onMaintenanceCheck={setIsMaintenanceActive} />
-            </MobileSafeWrapper>
-            
-=======
               {isMaintenanceActive && maintenanceTarget ? (
   <div className="flex flex-col w-full max-w-3xl px-4 sm:px-6">
     {/* Title with adjusted spacing */}
@@ -174,7 +145,6 @@ const Index = () => {
 
             </MobileSafeWrapper>
 
->>>>>>> c78eca0 (Update Maintenance)
             {/* Always show button as fallback if maintenance component fails */}
             {!isMaintenanceActive && (
               <Button variant="outline" size="lg" className="px-12 py-6 text-lg font-medium border-white text-white bg-transparent hover:bg-white hover:text-dark-blue animate-scale-in" asChild>
@@ -183,18 +153,9 @@ const Index = () => {
             )}
           </div>
         </div>
-<<<<<<< HEAD
-      </main>
-
-      <Footer />
-    </div>;
-};
-export default Index;
-=======
   </main>
 
   <Footer />
 </div>;
 };
 export default Index;
->>>>>>> c78eca0 (Update Maintenance)

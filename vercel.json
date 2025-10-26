@@ -1,62 +1,3 @@
-<<<<<<< HEAD
-{
-  "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/.*",
-      "dest": "/index.html"
-    }
-  ],
-  "env": {
-    "VITE_SUPABASE_URL": "@supabase_url",
-    "VITE_SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "VITE_MIDTRANS_CLIENT_KEY": "@midtrans_client_key"
-  },
-  "functions": {
-    "app": {
-      "maxDuration": 30
-    }
-  },
-  "headers": [
-    {
-      "source": "/.*",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        },
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://app.sandbox.midtrans.com https://api.midtrans.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.midtrans.com https://app.sandbox.midtrans.com; frame-src https://app.sandbox.midtrans.com https://app.midtrans.com;"
-        }
-      ]
-    }
-  ]
-=======
 {
   "version": 2,
   "buildCommand": "npm run build",
@@ -94,5 +35,4 @@
       ]
     }
   ]
->>>>>>> c78eca0 (Update Maintenance)
 }
