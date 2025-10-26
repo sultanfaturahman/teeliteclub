@@ -4,10 +4,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, XCircle, Clock, AlertTriangle, Package, ArrowRight, Home, RefreshCw } from "lucide-react";
+import { CheckCircle, XCircle, Clock, AlertTriangle, Package, ArrowRight, Home, RefreshCw, Loader2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { ensureSnapLoaded } from "@/utils/midtrans";
 
 interface PaymentStatus {
   order_id: string;
@@ -16,6 +17,7 @@ interface PaymentStatus {
   gross_amount?: string;
   transaction_time?: string;
   fraud_status?: string;
+  status_code?: string;
 }
 
 interface OrderDetails {
@@ -40,11 +42,19 @@ const FinishPayment = () => {
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [changeMethodLoading, setChangeMethodLoading] = useState(false);
+  const [activeMidtransOrderId, setActiveMidtransOrderId] = useState<string | null>(orderId);
 
   // Get parameters from URL
   const orderId = searchParams.get('order_id');
   const transactionStatus = searchParams.get('transaction_status');
   const statusCode = searchParams.get('status_code');
+
+  useEffect(() => {
+    if (orderId) {
+      setActiveMidtransOrderId(orderId);
+    }
+  }, [orderId]);
 
   useEffect(() => {
     console.log('FinishPayment useEffect - URL params:', {
@@ -125,17 +135,32 @@ const FinishPayment = () => {
     }
   };
   
-  const verifyWithBackend = async () => {
+  const verifyWithBackend = async (options?: { forceRefresh?: boolean; midtransOrderId?: string | null }) => {
     try {
       console.log('Verifying payment status with backend...');
+      if (!orderId) {
+        throw new Error('Order ID tidak ditemukan');
+      }
       
       // Check payment status via backend function
-      const { data, error } = await supabase.functions.invoke('check-payment-status', {
-        body: { 
-          order_id: orderId,
-          transaction_status: transactionStatus,
-          status_code: statusCode
+      const payload: Record<string, string | null> = {
+        order_id: orderId
+      };
+
+      const midtransOrderId = options?.midtransOrderId ?? activeMidtransOrderId;
+      if (midtransOrderId) {
+        payload.midtrans_order_id = midtransOrderId;
+      }
+
+      if (!options?.forceRefresh && transactionStatus) {
+        payload.transaction_status = transactionStatus;
+        if (statusCode) {
+          payload.status_code = statusCode;
         }
+      }
+
+      const { data, error } = await supabase.functions.invoke('check-payment-status', {
+        body: payload
       });
 
       if (error) {
@@ -182,6 +207,7 @@ const FinishPayment = () => {
       case 'capture':
         return <CheckCircle className="w-8 h-8 text-green-600" />;
       case 'pending':
+      case 'challenge':
         return <Clock className="w-8 h-8 text-blue-600" />;
       case 'deny':
       case 'cancel':
@@ -201,6 +227,7 @@ const FinishPayment = () => {
       case 'capture':
         return 'green';
       case 'pending':
+      case 'challenge':
         return 'blue';
       case 'deny':
       case 'cancel':
@@ -225,6 +252,8 @@ const FinishPayment = () => {
         return 'Pembayaran Berhasil!';
       case 'pending':
         return 'Pembayaran Sedang Diproses';
+      case 'challenge':
+        return 'Pembayaran Perlu Verifikasi';
       case 'deny':
         return 'Pembayaran Ditolak';
       case 'cancel':
@@ -248,6 +277,8 @@ const FinishPayment = () => {
         return 'Terima kasih! Pembayaran Anda telah berhasil dikonfirmasi. Pesanan Anda akan segera diproses.';
       case 'pending':
         return 'Pembayaran Anda sedang dalam proses verifikasi. Kami akan mengupdate status pesanan setelah pembayaran dikonfirmasi.';
+      case 'challenge':
+        return 'Pembayaran memerlukan verifikasi tambahan. Silakan menunggu konfirmasi dari penyedia pembayaran atau coba gunakan metode lain.';
       case 'deny':
         return 'Pembayaran Anda ditolak oleh bank atau penyedia pembayaran. Silakan coba metode pembayaran lain.';
       case 'cancel':
@@ -258,6 +289,106 @@ const FinishPayment = () => {
         return 'Pembayaran gagal diproses. Silakan coba lagi atau hubungi customer service untuk bantuan.';
       default:
         return 'Status pembayaran tidak dapat ditentukan. Silakan hubungi customer service untuk bantuan.';
+    }
+  };
+
+  const handleChangePaymentMethod = async () => {
+    if (!orderDetails || !paymentStatus) {
+      toast.error('Data pesanan belum lengkap.');
+      return;
+    }
+
+    const confirmed = window.confirm('Ganti metode pembayaran? Sesi pembayaran sebelumnya akan dibatalkan.');
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setChangeMethodLoading(true);
+
+      const { data: session } = await supabase.auth.getSession();
+      const accessToken = session.session?.access_token;
+
+      if (!accessToken) {
+        toast.error('Sesi berakhir, silakan login kembali.');
+        navigate('/auth');
+        setChangeMethodLoading(false);
+        return;
+      }
+
+      const response = await fetch(`/api/payments/${orderDetails.id}/change-method`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({ expectedTotal: orderDetails.total })
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        const message = errorBody?.error || 'Gagal membuat sesi pembayaran baru.';
+        throw new Error(message);
+      }
+
+      const { token, midtrans_order_id: newMidtransOrderId } = await response.json();
+
+      if (!token) {
+        throw new Error('Token pembayaran tidak valid.');
+      }
+
+      const resolvedMidtransOrderId = newMidtransOrderId ?? orderDetails.order_number ?? orderId;
+      if (resolvedMidtransOrderId) {
+        setActiveMidtransOrderId(resolvedMidtransOrderId);
+      }
+
+      const targetMidtransOrderId = resolvedMidtransOrderId ?? null;
+
+      await ensureSnapLoaded();
+
+      if (!window.snap?.pay) {
+        throw new Error('Midtrans Snap belum siap.');
+      }
+
+      window.snap.pay(token, {
+        onSuccess: async () => {
+          toast.success('Pembayaran berhasil dikonfirmasi!');
+          try {
+            await verifyWithBackend({ forceRefresh: true, midtransOrderId: targetMidtransOrderId });
+          } finally {
+            setChangeMethodLoading(false);
+          }
+        },
+        onPending: async () => {
+          toast.info('Pembayaran sedang diproses.');
+          try {
+            await verifyWithBackend({ forceRefresh: true, midtransOrderId: targetMidtransOrderId });
+          } finally {
+            setChangeMethodLoading(false);
+          }
+        },
+        onError: async (snapError) => {
+          console.error('Midtrans Snap error:', snapError);
+          toast.error('Pembayaran tidak dapat diproses. Silakan coba lagi.');
+          try {
+            await verifyWithBackend({ forceRefresh: true, midtransOrderId: targetMidtransOrderId });
+          } finally {
+            setChangeMethodLoading(false);
+          }
+        },
+        onClose: async () => {
+          toast.info('Jendela pembayaran ditutup. Anda dapat mencoba lagi jika diperlukan.');
+          try {
+            await verifyWithBackend({ forceRefresh: true, midtransOrderId: targetMidtransOrderId });
+          } finally {
+            setChangeMethodLoading(false);
+          }
+        }
+      });
+    } catch (changeError) {
+      console.error('Error changing payment method:', changeError);
+      toast.error(changeError instanceof Error ? changeError.message : 'Gagal memulai ulang pembayaran.');
+      setChangeMethodLoading(false);
     }
   };
 
@@ -314,6 +445,12 @@ const FinishPayment = () => {
   const isSuccess = statusColor === 'green';
   const isPending = statusColor === 'blue';
   const isFailed = statusColor === 'red';
+  const isPendingOrChallenge = Boolean(paymentStatus && (paymentStatus.transaction_status === 'pending' || paymentStatus.transaction_status === 'challenge'));
+  const amountMatches = paymentStatus?.gross_amount
+    ? Math.round(Number(paymentStatus.gross_amount)) === Math.round(orderDetails?.total ?? Number.NaN)
+    : true;
+  const orderNotSettled = Boolean(orderDetails && !['paid', 'shipped', 'delivered'].includes(orderDetails.status));
+  const canChangePaymentMethod = Boolean(orderDetails && paymentStatus && isPendingOrChallenge && orderNotSettled && amountMatches);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -457,7 +594,26 @@ const FinishPayment = () => {
                     )}
                     
                     {isPending && (
-                      <div className="flex gap-4">
+                      <div className="flex flex-col gap-3 sm:flex-row">
+                        {canChangePaymentMethod && (
+                          <Button
+                            onClick={handleChangePaymentMethod}
+                            className="flex-1"
+                            disabled={changeMethodLoading}
+                          >
+                            {changeMethodLoading ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Menyiapkan Pembayaran...
+                              </>
+                            ) : (
+                              <>
+                                <RotateCcw className="w-4 h-4 mr-2" />
+                                Ubah Metode Pembayaran
+                              </>
+                            )}
+                          </Button>
+                        )}
                         <Button onClick={() => navigate('/orders')} className="flex-1">
                           <Package className="w-4 h-4 mr-2" />
                           Pantau Status Pesanan

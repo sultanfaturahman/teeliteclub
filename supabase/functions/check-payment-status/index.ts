@@ -8,6 +8,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const ATTEMPT_SEPARATOR = '-ATTEMPT-';
+
+const normalizeMidtransOrderId = (orderId: string | null | undefined) => {
+  if (!orderId) {
+    return orderId ?? '';
+  }
+  const separatorIndex = orderId.indexOf(ATTEMPT_SEPARATOR);
+  return separatorIndex === -1 ? orderId : orderId.slice(0, separatorIndex);
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -19,9 +29,12 @@ serve(async (req) => {
     console.log('Request method:', req.method);
     console.log('Request headers:', Object.fromEntries(req.headers.entries()));
 
-    const { order_id, transaction_status, status_code } = await req.json();
+    const { order_id, transaction_status, status_code, midtrans_order_id } = await req.json();
 
-    console.log('Payment status check request:', { order_id, transaction_status, status_code });
+    const baseOrderId = normalizeMidtransOrderId(order_id);
+    const effectiveMidtransOrderId = midtrans_order_id || order_id;
+
+    console.log('Payment status check request:', { order_id, baseOrderId, transaction_status, status_code, midtrans_order_id });
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -58,12 +71,12 @@ serve(async (req) => {
     );
 
     // Get order from database using service client (bypasses RLS)
-    console.log('Querying order:', { order_id, user_id: user.id });
+    console.log('Querying order:', { order_id: baseOrderId, user_id: user.id });
 
     const { data: order, error: orderError } = await supabaseService
       .from('orders')
       .select('*')
-      .eq('order_number', order_id)
+      .eq('order_number', baseOrderId)
       .eq('user_id', user.id)
       .single();
 
@@ -73,7 +86,26 @@ serve(async (req) => {
       throw new Error(`Order not found or access denied: ${orderError?.message || 'No order data'}`);
     }
 
-    console.log('Order found:', order.id, order.status);
+    console.log('Order found:', order.id, order.status, 'Tracking attempt:', order.tracking_number);
+
+    if (effectiveMidtransOrderId && order.tracking_number && order.tracking_number !== effectiveMidtransOrderId) {
+      console.log('Incoming status check refers to stale attempt. Returning existing order state.');
+      const fallbackStatus = {
+        order_id: baseOrderId,
+        midtrans_order_id: effectiveMidtransOrderId,
+        transaction_status: order.status === 'paid' ? 'settlement' : order.status ?? 'pending',
+        transaction_time: order.updated_at || order.created_at,
+        gross_amount: order.total.toString()
+      };
+
+      return new Response(JSON.stringify({
+        order,
+        payment_status: fallbackStatus
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
 
     let paymentStatus = null;
     
@@ -81,7 +113,8 @@ serve(async (req) => {
     if (transaction_status) {
       console.log('Using transaction status from URL params:', transaction_status);
       paymentStatus = {
-        order_id: order_id,
+        order_id: baseOrderId,
+        midtrans_order_id: effectiveMidtransOrderId,
         transaction_status: transaction_status,
         status_code: status_code,
         transaction_time: new Date().toISOString(),
@@ -94,9 +127,10 @@ serve(async (req) => {
       
       if (serverKey) {
         try {
+          const lookupId = effectiveMidtransOrderId || baseOrderId;
           const statusUrl = isProduction 
-            ? `https://api.midtrans.com/v2/${order_id}/status`
-            : `https://api.sandbox.midtrans.com/v2/${order_id}/status`;
+            ? `https://api.midtrans.com/v2/${lookupId}/status`
+            : `https://api.sandbox.midtrans.com/v2/${lookupId}/status`;
 
           console.log('Checking with Midtrans API:', statusUrl);
 
@@ -124,11 +158,22 @@ serve(async (req) => {
     if (!paymentStatus) {
       console.log('No payment status available, using order status:', order.status);
       paymentStatus = {
-        order_id: order_id,
+        order_id: baseOrderId,
+        midtrans_order_id: effectiveMidtransOrderId,
         transaction_status: order.status === 'paid' ? 'settlement' : 'pending',
         transaction_time: order.updated_at || order.created_at,
         gross_amount: order.total.toString()
       };
+    }
+
+    if (paymentStatus) {
+      paymentStatus.order_id = normalizeMidtransOrderId(paymentStatus.order_id || baseOrderId);
+      if (!paymentStatus.midtrans_order_id) {
+        paymentStatus.midtrans_order_id = effectiveMidtransOrderId;
+      }
+      if (!paymentStatus.gross_amount) {
+        paymentStatus.gross_amount = order.total.toString();
+      }
     }
 
     console.log('Final payment status:', paymentStatus);
@@ -143,6 +188,11 @@ serve(async (req) => {
       newOrderStatus = 'cancelled'; // Use 'cancelled' instead of 'payment_failed' to match DB constraint
     }
 
+    if (order.status === 'paid' && newOrderStatus !== 'paid') {
+      console.log('Order already paid. Skipping downgrade from', paymentStatus.transaction_status);
+      newOrderStatus = order.status;
+    }
+
     // Update order status if changed
     if (newOrderStatus !== order.status) {
       console.log('Updating order status from', order.status, 'to', newOrderStatus);
@@ -153,7 +203,12 @@ serve(async (req) => {
       // Clear payment_url if payment is successful
       if (newOrderStatus === 'paid') {
         updateData.payment_url = null;
+        updateData.tracking_number = null;
         console.log('Clearing payment URL for successful payment');
+      } else if (newOrderStatus === 'pending' && effectiveMidtransOrderId) {
+        updateData.tracking_number = effectiveMidtransOrderId;
+      } else if (newOrderStatus === 'cancelled') {
+        updateData.tracking_number = null;
       }
       
       await supabaseService

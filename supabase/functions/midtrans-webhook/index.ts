@@ -10,6 +10,8 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 };
 
+const ATTEMPT_SEPARATOR = '-ATTEMPT-';
+
 interface MidtransVANumber {
   bank?: string;
   va_number?: string;
@@ -32,6 +34,24 @@ interface MidtransNotification {
   store?: string;
   payment_code?: string;
 }
+
+const normalizeMidtransOrderId = (orderId: string): string => {
+  if (!orderId) {
+    return orderId;
+  }
+  const separatorIndex = orderId.indexOf(ATTEMPT_SEPARATOR);
+  return separatorIndex === -1 ? orderId : orderId.slice(0, separatorIndex);
+};
+
+const isSuccessfulTransaction = (status: string, fraudStatus?: string) => {
+  if (status === 'settlement') {
+    return true;
+  }
+  if (status === 'capture') {
+    return fraudStatus === 'accept';
+  }
+  return false;
+};
 
 // Function to verify Midtrans signature
 async function verifySignature(notification: MidtransNotification, serverKey: string): Promise<boolean> {
@@ -175,12 +195,14 @@ serve(async (req: Request) => {
     console.log('Notification:', JSON.stringify(notification, null, 2));
     console.log('Timestamp:', new Date().toISOString());
 
-    const orderId = notification.order_id;
+    const rawOrderId = notification.order_id;
+    const baseOrderId = normalizeMidtransOrderId(rawOrderId);
     const transactionStatus = notification.transaction_status;
     const fraudStatus = notification.fraud_status;
     const detectedPaymentMethod = getPaymentMethodLabel(notification);
 
     console.log('Detected payment method:', detectedPaymentMethod || notification.payment_type || 'unknown');
+    console.log('Raw Midtrans order ID:', rawOrderId, 'Base order ID:', baseOrderId);
 
     let orderStatus = 'pending';
 
@@ -202,16 +224,41 @@ serve(async (req: Request) => {
     // Get order data first
     const { data: orderData, error: orderError } = await supabaseService
       .from('orders')
-      .select('id, total, status, payment_method')
-      .eq('order_number', orderId)
+      .select('id, total, status, payment_method, tracking_number')
+      .eq('order_number', baseOrderId)
       .single();
 
     if (orderError) {
-      console.warn('Order not found for incoming notification:', orderId, orderError);
+      console.warn('Order not found for incoming notification:', baseOrderId, orderError);
       return new Response(JSON.stringify({
         status: 'ignored',
         reason: 'order_not_found',
-        order_id: orderId
+        order_id: baseOrderId
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
+
+    const isLatestAttempt = !orderData.tracking_number || orderData.tracking_number === rawOrderId;
+    if (!isLatestAttempt) {
+      console.warn('Ignoring stale Midtrans notification. Current attempt:', orderData.tracking_number, 'Received:', rawOrderId);
+      return new Response(JSON.stringify({
+        status: 'ignored',
+        reason: 'stale_attempt',
+        order_id: baseOrderId
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
+
+    if (orderData.status === 'paid') {
+      console.log('Order already settled. Ignoring notification for order:', baseOrderId, 'status:', transactionStatus);
+      return new Response(JSON.stringify({
+        status: 'ignored',
+        reason: 'already_paid',
+        order_id: baseOrderId
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -227,7 +274,7 @@ serve(async (req: Request) => {
       return new Response(JSON.stringify({
         status: 'ignored',
         reason: 'invalid_amount',
-        order_id: orderId
+        order_id: baseOrderId
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -241,7 +288,7 @@ serve(async (req: Request) => {
       return new Response(JSON.stringify({ 
         status: 'ignored',
         reason: 'amount_mismatch',
-        order_id: orderId 
+        order_id: baseOrderId 
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -260,10 +307,14 @@ serve(async (req: Request) => {
       orderUpdates.payment_method = paymentMethodToStore;
     }
 
+    if (orderStatus === 'paid' || orderStatus === 'cancelled') {
+      orderUpdates.tracking_number = null;
+    }
+
     const { error: updateError } = await supabaseService
       .from('orders')
       .update(orderUpdates)
-      .eq('order_number', orderId);
+      .eq('order_number', baseOrderId);
 
     if (updateError) {
       console.error('Error updating order status:', updateError);
@@ -591,11 +642,11 @@ serve(async (req: Request) => {
       }
     }
 
-    console.log(`Order ${orderId} status updated to: ${orderStatus}`);
+    console.log(`Order ${baseOrderId} status updated to: ${orderStatus}`);
 
     return new Response(JSON.stringify({ 
       status: 'success',
-      order_id: orderId,
+      order_id: baseOrderId,
       order_status: orderStatus 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

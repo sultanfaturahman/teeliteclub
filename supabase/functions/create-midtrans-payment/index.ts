@@ -481,7 +481,7 @@ serve(async (req) => {
       .from('orders')
       .update({ 
         payment_url: midtransData.redirect_url, // Store payment URL for continue payment functionality
-        tracking_number: midtransData.token // Store Midtrans token in tracking_number field temporarily
+        tracking_number: transactionData.transaction_details.order_id // Track current Midtrans order reference
       })
       .eq('id', order.id);
 

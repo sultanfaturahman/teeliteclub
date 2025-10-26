@@ -135,7 +135,7 @@ serve(async (req) => {
       .from('orders')
       .update({ 
         payment_url: midtransData.redirect_url,
-        tracking_number: midtransData.token,
+        tracking_number: transactionData.transaction_details.order_id,
         updated_at: new Date().toISOString()
       })
       .eq('id', order.id);
