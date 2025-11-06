@@ -130,7 +130,7 @@ const Index = () => {
       </div>
     </div>
 
-    <div className="mt-auto sm:mt-32 flex flex-col items-center gap-1 sm:gap-3 pb-2 sm:pb-8 px-2 sm:px-0 w-full">
+    <div className="mt-4 sm:mt-10 flex flex-col items-center gap-1 sm:gap-2 pb-2 sm:pb-8 px-2 sm:px-0 w-full">
       {countdownMessage && (
         <p className="text-[13px] sm:text-sm text-white/70 font-medium text-center tracking-wide px-3 sm:px-0">
           {countdownMessage}
