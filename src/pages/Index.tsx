@@ -96,7 +96,7 @@ const Index = () => {
           <div
             className={`flex flex-col items-center text-center ${
               isMaintenanceActive
-                ? 'text-white pt-[14vh] pb-10 sm:pt-[10vh] sm:pb-14'
+                ? 'text-white pt-[8vh] pb-4 sm:pt-[10vh] sm:pb-14'
                 : 'text-dark-blue py-[200px] sm:py-[220px]'
             }`}
           >
@@ -113,30 +113,30 @@ const Index = () => {
               }
             >
               {isMaintenanceActive && maintenanceTarget ? (
-  <div className="flex flex-col w-full max-w-3xl px-4 sm:px-6">
-    {/* Title with adjusted spacing */}
-    <div className="flex flex-col items-center justify-start gap-6 sm:gap-8 pt-[60px] sm:pt-[80px]">
-      <h1 className="text-[28px] sm:text-[44px] font-semibold tracking-[0.08em] leading-tight">
+  <div className="flex flex-col w-full max-w-none px-0 sm:px-8 min-h-[80vh] sm:min-h-0 sm:max-w-4xl">
+    <div className="flex flex-col flex-1 w-full items-center text-center">
+      <h1 className="text-[28px] sm:text-[44px] font-semibold tracking-tight leading-tight mt-6 sm:mt-8 mb-1 sm:mb-6">
         {maintenanceTitle ?? "Be Back Soon"}
       </h1>
-      
-      {/* Description text - smaller and before form */}
-      <p className="text-[14px] sm:text-base text-white/80 max-w-[340px] sm:max-w-xl mx-auto leading-relaxed">
-        {maintenanceMessage ?? "Leave an email so u can catch up"}
-      </p>
-      
-      {/* Form with specific sizing */}
-      <MaintenanceWaitlistForm formClassName="max-w-[340px] sm:max-w-[400px]" />
+
+      <div className="flex flex-1 flex-col items-center justify-center gap-0 sm:gap-10 w-full mt-0 sm:mt-10">
+        <div className="w-full">
+          <MaintenanceWaitlistForm formClassName="sm:max-w-xl -mt-1 sm:mt-0" />
+        </div>
+
+        <p className="text-[14px] sm:text-base text-white/80 max-w-2xl mx-auto leading-relaxed sm:leading-loose mt-4 sm:mt-0">
+          {maintenanceMessage ?? "Leave an email so u can catch up"}
+        </p>
+      </div>
     </div>
 
-    {/* Countdown moved down with more spacing */}
-    <div className="mt-[60px] sm:mt-[80px] mb-[40px] sm:mb-[60px] flex justify-center">
-      <div className="w-full max-w-[520px] px-4 sm:px-6 flex flex-col items-center gap-4">
-        {countdownMessage && (
-          <p className="text-[13px] sm:text-sm text-white/70 font-medium text-center tracking-wide">
-            {countdownMessage}
-          </p>
-        )}
+    <div className="mt-auto sm:mt-32 flex flex-col items-center gap-1 sm:gap-3 pb-2 sm:pb-8 px-2 sm:px-0 w-full">
+      {countdownMessage && (
+        <p className="text-[13px] sm:text-sm text-white/70 font-medium text-center tracking-wide px-3 sm:px-0">
+          {countdownMessage}
+        </p>
+      )}
+      <div className="w-full flex justify-center">
         <MaintenanceCountdown target={maintenanceTarget} tone="dark" />
       </div>
     </div>
