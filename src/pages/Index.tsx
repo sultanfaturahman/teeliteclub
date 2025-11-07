@@ -130,12 +130,12 @@ const Index = () => {
                     <h1 className="text-[28px] sm:text-[44px] font-semibold tracking-tight leading-tight mt-4 sm:mt-8 mb-1 sm:mb-6">
                       {maintenanceTitle ?? "Be Back Soon"}
                     </h1>
-                    <div className="flex flex-col items-center justify-center gap-10 sm:gap-2 w-full mt-2 sm:mt-2 sm:flex-1">
+                    <div className="flex flex-col items-center justify-center gap-1 sm:gap-2 w-full mt-2 sm:mt-2 sm:flex-1">
                       <div className="w-full flex justify-center">
                         <MaintenanceWaitlistForm />
                       </div>
 
-                      <p className="text-[14px] sm:text-base text-white/80 max-w-2xl mx-auto leading-relaxed sm:leading-loose mt-1 sm:mt-0">
+                      <p className="text-[14px] sm:text-base text-white/80 max-w-2xl mx-auto leading-relaxed sm:leading-loose sm:mt-0">
                         {maintenanceMessage ?? "Leave an email so u can catch up"}
                       </p>
                     </div>
