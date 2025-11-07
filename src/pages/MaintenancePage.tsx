@@ -94,9 +94,9 @@ const MaintenancePage = () => {
 
   return (
     <div className="min-h-[100svh] min-h-[100dvh] flex flex-col bg-gradient-to-br from-[#0f172a] via-[#1d2a5c] to-[#0f172a] text-white">
-      <main className="flex-1 flex flex-col items-center px-4 pt-24 pb-8 sm:px-6 sm:pt-16 sm:pb-12 text-center">
-        <div className="flex flex-col flex-1 w-full max-w-3xl text-center">
-          <div className="flex flex-col items-center justify-center flex-1 gap-5 sm:gap-6">
+      <main className="flex-1 flex flex-col items-center px-4 pt-16 pb-6 sm:px-6 sm:pt-14 sm:pb-10 text-center">
+        <div className="flex flex-col justify-between flex-1 w-full max-w-4xl text-center gap-6 sm:gap-8">
+          <div className="flex flex-col items-center gap-4 sm:gap-5">
             <button
               type="button"
               onClick={handleIconClick}
@@ -118,63 +118,65 @@ const MaintenancePage = () => {
               {settings.title}
             </h1>
 
-            <MaintenanceWaitlistForm formClassName="max-w-md" />
+            <MaintenanceWaitlistForm formClassName="self-stretch w-full sm:max-w-2xl sm:self-center" />
 
-            <p className="text-sm sm:text-base text-white/80 max-w-xl mx-auto">
+            <p className="text-sm sm:text-base text-white/80 max-w-2xl mx-auto">
               {settings.message}
             </p>
           </div>
 
-          {settings.maintenance_end && (
-            <div className="mt-auto flex flex-col items-center gap-3 pb-6 sm:pb-8">
-              {countdownActive() && (
-                <>
-                  {settings.countdown_message && (
-                    <p className="text-sm sm:text-base font-medium text-white">
-                      {settings.countdown_message}
-                    </p>
-                  )}
-                  <MaintenanceCountdown target={settings.maintenance_end} tone="dark" />
-                </>
-              )}
+          <div className="flex flex-col items-center gap-4 sm:gap-5 pb-2 sm:pb-4">
+            {settings.maintenance_end && (
+              <div className="flex flex-col items-center gap-3 sm:gap-4">
+                {countdownActive() && (
+                  <>
+                    {settings.countdown_message && (
+                      <p className="text-sm sm:text-base font-medium text-white">
+                        {settings.countdown_message}
+                      </p>
+                    )}
+                    <MaintenanceCountdown target={settings.maintenance_end} tone="dark" />
+                  </>
+                )}
 
-              <p className="text-xs text-white/70">
-                {`Estimasi selesai: ${new Date(settings.maintenance_end).toLocaleString("id-ID", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}`}
-              </p>
-            </div>
-          )}
-
-          <div className="w-full pt-6 sm:pt-8 space-y-3 flex flex-col items-center">
-            <Button asChild variant="outline" className="gap-2 border-white/40 text-white hover:bg-white/10">
-              <Link to="/">
-                <Home className="h-4 w-4" />
-                Kembali ke Beranda
-              </Link>
-            </Button>
-
-            {showAdminButton && (
-              <Button
-                variant="default"
-                className="gap-2 bg-white/20 hover:bg-white/30 text-white border border-white/40"
-                onClick={() => {
-                  window.location.href = "/auth?mode=signin";
-                }}
-              >
-                <KeyRound className="h-4 w-4" />
-                Login Admin
-              </Button>
+                <p className="text-xs text-white/70">
+                  {`Estimasi selesai: ${new Date(settings.maintenance_end).toLocaleString("id-ID", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}`}
+                </p>
+              </div>
             )}
+
+            <div className="w-full pt-2 sm:pt-3 space-y-2 flex flex-col items-center">
+              <Button asChild variant="outline" className="gap-2 border-white/40 text-white hover:bg-white/10">
+                <Link to="/">
+                  <Home className="h-4 w-4" />
+                  Kembali ke Beranda
+                </Link>
+              </Button>
+
+              {showAdminButton && (
+                <Button
+                  variant="default"
+                  className="gap-2 bg-white/20 hover:bg-white/30 text-white border border-white/40"
+                  onClick={() => {
+                    window.location.href = "/auth?mode=signin";
+                  }}
+                >
+                  <KeyRound className="h-4 w-4" />
+                  Login Admin
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </main>
 
-      <footer className="mt-auto py-6 text-center text-xs text-white/70">
+      <footer className="mt-auto py-4 text-center text-xs text-white/70">
         © {new Date().getFullYear()} TeeLiteClub. All rights reserved.
       </footer>
     </div>
