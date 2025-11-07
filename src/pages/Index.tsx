@@ -125,31 +125,29 @@ const Index = () => {
                 </Button>
               }>
               {isMaintenanceActive && maintenanceTarget ? (
-                <div className="flex flex-col w-full max-w-none px-0 sm:px-8 min-h-[80vh] sm:min-h-0 sm:max-w-4xl">
-                  <div className="flex flex-col flex-1 w-full items-center text-center">
-                    <h1 className="text-[28px] sm:text-[44px] font-semibold tracking-tight leading-tight mt-6 sm:mt-8 mb-1 sm:mb-6">
+                <div className="flex flex-col w-full max-w-none px-0 sm:px-8 min-h-[80vh] sm:min-h-0 sm:max-w-4xl justify-center sm:justify-start">
+                  <div className="flex flex-col flex-1 w-full items-center text-center justify-center sm:justify-start">
+                    <h1 className="text-[28px] sm:text-[44px] font-semibold tracking-tight leading-tight mt-4 sm:mt-8 mb-1 sm:mb-6">
                       {maintenanceTitle ?? "Be Back Soon"}
                     </h1>
-
-      <div className="flex flex-1 flex-col items-center justify-center gap-0 sm:gap-2 w-full mt-0 sm:mt-10">
-                      <div className="w-full">
-                        <MaintenanceWaitlistForm formClassName="sm:max-w-xl -mt-1 sm:mt-0" />
+                    <div className="flex flex-col items-center justify-center gap-10 sm:gap-2 w-full mt-2 sm:mt-2 sm:flex-1">
+                      <div className="w-full flex justify-center">
+                        <MaintenanceWaitlistForm />
                       </div>
 
-        <p className="text-[14px] sm:text-base text-white/80 max-w-2xl mx-auto leading-relaxed sm:leading-loose mt-1 sm:mt-0">
-                        {maintenanceMessage ??
-                          "Leave an email so u can catch up"}
+                      <p className="text-[14px] sm:text-base text-white/80 max-w-2xl mx-auto leading-relaxed sm:leading-loose mt-1 sm:mt-0">
+                        {maintenanceMessage ?? "Leave an email so u can catch up"}
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-4 sm:mt-10 flex flex-col items-center gap-1 sm:gap-2 pb-2 sm:pb-8 px-2 sm:px-0 w-full">
+                  <div className="mt-1 sm:mt-10 flex flex-col items-center gap-1 sm:gap-2 pb-2 sm:pb-8 px-2 sm:px-0 w-full">
                     {countdownMessage && (
                       <p className="text-[13px] sm:text-sm text-white/70 font-normal text-center tracking-wide px-3 sm:px-0">
                         {countdownMessage}
                       </p>
                     )}
-                    <div className="w-full flex justify-center">
+                    <div className="w-full flex pb-14 justify-center">
                       <MaintenanceCountdown
                         target={maintenanceTarget}
                         tone="dark"

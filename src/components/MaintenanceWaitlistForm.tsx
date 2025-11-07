@@ -71,11 +71,11 @@ export const MaintenanceWaitlistForm = ({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 w-full">
       <form
         onSubmit={handleNotifySubmit}
         className={cn(
-          "w-full mx-auto flex flex-col items-center gap-4 px-4 sm:px-6 py-4 sm:py-6",
+          "w-full flex flex-col items-stretch gap-4 px-1 sm:px-6 py-4 sm:py-6",
           formClassName
         )}
       >

@@ -42,7 +42,7 @@ export const Countdown = ({ target, tone = "light" }: CountdownProps) => {
   const secondary = tone === "dark" ? "text-white/70" : "text-[#6B7280]";
 
   return (
-    <div className={`flex flex-wrap justify-center items-end gap-3 sm:gap-6 ${primary}`}>
+    <div className={`flex flex-wrap justify-center items-end gap-4 sm:gap-3 ${primary}`}>
       {SEGMENTS.map(({ label, key }) => {
         const value = timeLeft[key as SegmentKey].toString().padStart(2, "0");
         return (
