@@ -25,7 +25,7 @@ A modern apparel storefront built with **React + Vite + TypeScript**, styled wit
 
 ## 🔗 Live
 
-* **Site**: [https://teeliteclub.vercel.app](https://teeliteclub.vercel.app)
+* **Site**: [https://teeliteclub.com](https://teeliteclub.com)
 
 ## 🗂️ Project Structure
 
