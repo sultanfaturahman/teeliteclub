@@ -127,7 +127,7 @@ const Index = () => {
               {isMaintenanceActive && maintenanceTarget ? (
                 <div className="flex flex-col w-full max-w-none px-0 sm:px-8 min-h-[80vh] sm:min-h-0 sm:max-w-4xl justify-center sm:justify-start">
                   <div className="flex flex-col flex-1 w-full items-center text-center justify-center sm:justify-start">
-                    <h1 className="text-[28px] sm:text-[44px] font-semibold tracking-tight leading-tight mt-4 sm:mt-8 mb-1 sm:mb-6">
+                    <h1 className="text-[28px] sm:text-[44px] font-normal tracking-tight leading-tight mt-4 sm:mt-8 mb-1 sm:mb-6">
                       {maintenanceTitle ?? "Be Back Soon"}
                     </h1>
                     <div className="flex flex-col items-center justify-center gap-1 sm:gap-2 w-full mt-2 sm:mt-2 sm:flex-1">
