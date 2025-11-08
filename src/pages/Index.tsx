@@ -147,7 +147,7 @@ const Index = () => {
                         {countdownMessage}
                       </p>
                     )}
-                    <div className="w-full flex pb-10 justify-center">
+                    <div className="w-full flex pb-8 pt-1 justify-center">
                       <MaintenanceCountdown
                         target={maintenanceTarget}
                         tone="dark"
