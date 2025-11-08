@@ -141,13 +141,13 @@ const Index = () => {
                     </div>
                   </div>
 
-                  <div className="mt-1 sm:mt-10 flex flex-col items-center gap-1 sm:gap-2 pb-2 sm:pb-8 px-2 sm:px-0 w-full">
+                  <div className="mt-1 sm:mt-10 flex flex-col items-center gap-2 sm:gap-2 pb-2 sm:pb-8 px-2 sm:px-0 w-full">
                     {countdownMessage && (
                       <p className="text-[13px] sm:text-sm text-white/70 font-normal text-center tracking-wide px-3 sm:px-0">
                         {countdownMessage}
                       </p>
                     )}
-                    <div className="w-full flex pb-14 justify-center">
+                    <div className="w-full flex pb-10 pt-1 justify-center">
                       <MaintenanceCountdown
                         target={maintenanceTarget}
                         tone="dark"
