@@ -54,7 +54,7 @@ export const Countdown = ({ target, tone = "light" }: CountdownProps) => {
               {value}
             </span>
             <span
-              className={`text-[12px] sm:text-sm uppercase tracking-[0.2em] ${secondary} font-normal`}
+              className={`text-[10px] sm:text-sm uppercase tracking-[0.2em] ${secondary} font-normal`}
             >
               {label}
             </span>
