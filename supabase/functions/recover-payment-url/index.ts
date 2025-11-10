@@ -9,6 +9,45 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+const ATTEMPT_SEPARATOR = '-ATTEMPT-';
+
+const buildAttemptedOrderId = (baseOrderNumber = '') => {
+  const trimmedBase = baseOrderNumber.trim();
+  const suffix = `${ATTEMPT_SEPARATOR}${Date.now()}`;
+  const maxLength = 50;
+
+  if (!trimmedBase) {
+    return `ORDER${suffix}`;
+  }
+
+  if (trimmedBase.length + suffix.length <= maxLength) {
+    return `${trimmedBase}${suffix}`;
+  }
+
+  return `${trimmedBase.slice(0, maxLength - suffix.length)}${suffix}`;
+};
+
+const getBaseUrl = () => {
+  const allowedOrigins = (Deno.env.get('ALLOWED_ORIGINS') || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return (
+    Deno.env.get('PUBLIC_BASE_URL') ||
+    Deno.env.get('ALLOWED_ORIGIN') ||
+    allowedOrigins[0] ||
+    'http://localhost:5173'
+  );
+};
+
+const getSnapUrl = () => {
+  const environment = Deno.env.get('MIDTRANS_ENVIRONMENT') === 'production' ? 'production' : 'sandbox';
+  return environment === 'production'
+    ? 'https://app.midtrans.com/snap/v1/transactions'
+    : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -32,7 +71,11 @@ serve(async (req) => {
     );
 
     // Authenticate user
-    const authHeader = req.headers.get('Authorization')!;
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Authorization header missing');
+    }
+
     const token = authHeader.replace('Bearer ', '');
     const { data } = await supabaseClient.auth.getUser(token);
     const user = data.user;
@@ -60,7 +103,6 @@ serve(async (req) => {
       throw new Error('Order not found or access denied');
     }
 
-    // Check if order is eligible for payment URL recovery
     if (order.status !== 'pending') {
       return new Response(JSON.stringify({ 
         error: 'Order is not in pending status',
@@ -71,45 +113,42 @@ serve(async (req) => {
       });
     }
 
-    if (order.payment_url) {
-      return new Response(JSON.stringify({ 
-        success: true,
-        message: 'Order already has payment URL',
-        payment_url: order.payment_url
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      });
-    }
-
-    // Create new Midtrans payment for legacy order
-    const environment = Deno.env.get('MIDTRANS_ENVIRONMENT') || 'sandbox';
-    const isProduction = environment === 'production';
     const serverKey = Deno.env.get('MIDTRANS_SERVER_KEY');
-
     if (!serverKey) {
       throw new Error('Midtrans server key not configured');
     }
 
-    const snapUrl = isProduction 
-      ? 'https://app.midtrans.com/snap/v1/transactions'
-      : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
+    // Cancel existing pending payment attempts before creating a new one
+    const cancelPendingResult = await supabaseService
+      .from('payments')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('order_id', order.id)
+      .eq('status', 'pending');
+
+    if (cancelPendingResult.error) {
+      console.error('Failed to cancel pending payments before recovery:', cancelPendingResult.error);
+    }
+
+    const midtransOrderId = buildAttemptedOrderId(order.order_number);
+    const snapUrl = getSnapUrl();
+    const baseUrl = getBaseUrl();
+    const roundedTotal = Math.round(order.total || 0);
 
     // Prepare Midtrans transaction data
     const transactionData = {
       transaction_details: {
-        order_id: order.order_number,
-        gross_amount: Math.round(order.total)
+        order_id: midtransOrderId,
+        gross_amount: roundedTotal
       },
       customer_details: {
-        first_name: order.nama_pembeli || 'Customer',
+        first_name: order.nama_pembeli || user.email?.split('@')[0] || 'Customer',
         email: order.email_pembeli || user.email,
         phone: order.telepon_pembeli || ''
       },
       callbacks: {
-        finish: `${Deno.env.get('ALLOWED_ORIGIN')}/finish-payment?order_id=${order.order_number}&transaction_status={transaction_status}&status_code={status_code}`,
-        unfinish: `${Deno.env.get('ALLOWED_ORIGIN')}/payment-error?order_id=${order.order_number}&transaction_status=cancel&error_type=cancelled`,
-        error: `${Deno.env.get('ALLOWED_ORIGIN')}/payment-error?order_id=${order.order_number}&transaction_status=failure&error_type=system&error_code={status_code}`
+        finish: `${baseUrl}/finish-payment?order_id=${midtransOrderId}&transaction_status={transaction_status}&status_code={status_code}`,
+        unfinish: `${baseUrl}/payment-error?order_id=${order.order_number}&transaction_status=cancel&error_type=cancelled`,
+        error: `${baseUrl}/payment-error?order_id=${order.order_number}&transaction_status=failure&error_type=system&error_code={status_code}`
       }
     };
 
@@ -130,12 +169,14 @@ serve(async (req) => {
 
     const midtransData = await midtransResponse.json();
 
-    // Update order with new payment URL
+    // Update order with new payment details
     const { error: updateError } = await supabaseService
       .from('orders')
       .update({ 
         payment_url: midtransData.redirect_url,
-        tracking_number: transactionData.transaction_details.order_id,
+        tracking_number: midtransOrderId,
+        payment_method: 'Midtrans',
+        status: 'pending',
         updated_at: new Date().toISOString()
       })
       .eq('id', order.id);
@@ -144,11 +185,35 @@ serve(async (req) => {
       throw new Error(`Failed to update order: ${updateError.message}`);
     }
 
+    // Upsert latest payment attempt metadata
+    const paymentUpsertResult = await supabaseService
+      .from('payments')
+      .upsert(
+        {
+          order_id: order.id,
+          amount: order.total,
+          status: 'pending',
+          payment_proof: JSON.stringify({
+            midtrans_order_id: midtransOrderId,
+            generated_at: new Date().toISOString(),
+            source: 'recover-payment-url'
+          }),
+          updated_at: new Date().toISOString()
+        },
+        { onConflict: 'order_id' }
+      );
+
+    if (paymentUpsertResult.error) {
+      console.error('Failed to upsert payment record during recovery:', paymentUpsertResult.error);
+    }
+
     return new Response(JSON.stringify({
       success: true,
-      message: 'Payment URL recovered successfully',
+      message: 'Payment session regenerated successfully',
       payment_url: midtransData.redirect_url,
-      order_number: order.order_number
+      token: midtransData.token,
+      order_number: order.order_number,
+      midtrans_order_id: midtransOrderId
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
