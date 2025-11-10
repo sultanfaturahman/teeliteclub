@@ -17,7 +17,7 @@ import { Footer } from "@/components/layout/Footer";
 const Checkout = () => {
   const navigate = useNavigate();
   const { items, getCartTotal, clearCart } = useCart();
-  const { user, profile } = useAuth();
+  const { user, profile, updateProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nama_pembeli: "",
@@ -134,6 +134,29 @@ const Checkout = () => {
           toast.error(`Stok tidak mencukupi untuk ${item.product?.name} ukuran ${item.ukuran}. Stok tersedia: ${stockData?.stok || 0}`);
           return;
         }
+      }
+
+      // Sync the latest shipping/contact info back to the user's profile silently
+      try {
+        if (user) {
+          const profileUpdates: Partial<{ nama: string; telepon: string; alamat: string }> = {};
+          if (formData.nama_pembeli && formData.nama_pembeli !== profile?.nama) {
+            profileUpdates.nama = formData.nama_pembeli;
+          }
+          if (formData.telepon_pembeli && formData.telepon_pembeli !== profile?.telepon) {
+            profileUpdates.telepon = formData.telepon_pembeli;
+          }
+          if (formData.shipping_address && formData.shipping_address !== profile?.alamat) {
+            profileUpdates.alamat = formData.shipping_address;
+          }
+
+          if (Object.keys(profileUpdates).length > 0) {
+            await updateProfile(profileUpdates, { silent: true });
+          }
+        }
+      } catch (profileSyncError) {
+        console.error('Failed to sync profile data from checkout form:', profileSyncError);
+        // Intentionally continue with checkout even if the profile sync fails
       }
 
       const orderData = {

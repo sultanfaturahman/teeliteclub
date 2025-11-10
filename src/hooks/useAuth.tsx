@@ -13,6 +13,10 @@ interface Profile {
   role: string;
 }
 
+interface UpdateProfileOptions {
+  silent?: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -22,7 +26,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
-  updateProfile: (updates: Partial<Profile>) => Promise<void>;
+  updateProfile: (updates: Partial<Profile>, options?: UpdateProfileOptions) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -214,7 +218,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateProfile = async (updates: Partial<Profile>) => {
+  const updateProfile = async (updates: Partial<Profile>, options: UpdateProfileOptions = {}) => {
     try {
       if (!user) throw new Error('User not authenticated');
 
@@ -226,7 +230,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
 
       setProfile(prev => prev ? { ...prev, ...updates } : null);
-      toast.success('Profile berhasil diperbarui!');
+      if (!options.silent) {
+        toast.success('Profile berhasil diperbarui!');
+      }
     } catch (error) {
       logger.error('Failed to update profile', error);
       toast.error('Gagal memperbarui profile');
