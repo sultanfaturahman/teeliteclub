@@ -15,6 +15,7 @@ import { Footer } from "@/components/layout/Footer";
 import { AccountSkeleton, AccountOrdersSkeleton } from "@/components/loading/AccountSkeleton";
 import { toast as sonnerToast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
+import { getFreshAccessToken } from "@/utils/accessToken";
 
 type OrderItemRecord = {
   id: string;
@@ -150,10 +151,10 @@ const Account = () => {
       console.log('Payment URL missing, attempting recovery for order:', orderId);
 
       try {
-        const { data: session } = await supabase.auth.getSession();
-        const accessToken = session.session?.access_token;
-
-        if (!accessToken) {
+        let accessToken: string;
+        try {
+          accessToken = await getFreshAccessToken();
+        } catch {
           toast({
             title: "Sesi Berakhir",
             description: "Silakan login kembali untuk melanjutkan pembayaran.",

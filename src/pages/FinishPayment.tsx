@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ensureSnapLoaded } from "@/utils/midtrans";
+import { getFreshAccessToken } from "@/utils/accessToken";
 
 interface PaymentStatus {
   order_id: string;
@@ -307,10 +308,10 @@ const FinishPayment = () => {
     try {
       setChangeMethodLoading(true);
 
-      const { data: session } = await supabase.auth.getSession();
-      const accessToken = session.session?.access_token;
-
-      if (!accessToken) {
+      let accessToken: string;
+      try {
+        accessToken = await getFreshAccessToken();
+      } catch (tokenError) {
         toast.error('Sesi berakhir, silakan login kembali.');
         navigate('/auth');
         setChangeMethodLoading(false);

@@ -12,6 +12,7 @@ import { Footer } from "@/components/layout/Footer";
 import { OrderDetailSkeleton } from "@/components/loading/OrdersSkeleton";
 import { toast as sonnerToast } from "sonner";
 import { formatPaymentMethod } from "@/utils/payment";
+import { getFreshAccessToken } from "@/utils/accessToken";
 
 interface OrderItem {
   id: string;
@@ -121,10 +122,10 @@ const OrderDetail = () => {
       console.log('Payment URL missing, attempting recovery for order:', order.id);
 
       try {
-        const { data: session } = await supabase.auth.getSession();
-        const accessToken = session.session?.access_token;
-
-        if (!accessToken) {
+        let accessToken: string;
+        try {
+          accessToken = await getFreshAccessToken();
+        } catch {
           toast({
             title: "Sesi Berakhir",
             description: "Silakan login kembali untuk melanjutkan pembayaran.",
