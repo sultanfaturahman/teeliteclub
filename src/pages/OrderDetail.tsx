@@ -121,8 +121,24 @@ const OrderDetail = () => {
       console.log('Payment URL missing, attempting recovery for order:', order.id);
 
       try {
+        const { data: session } = await supabase.auth.getSession();
+        const accessToken = session.session?.access_token;
+
+        if (!accessToken) {
+          toast({
+            title: "Sesi Berakhir",
+            description: "Silakan login kembali untuk melanjutkan pembayaran.",
+            variant: "destructive",
+          });
+          navigate('/auth');
+          return;
+        }
+
         const { data, error } = await supabase.functions.invoke('recover-payment-url', {
-          body: { order_id: order.id }
+          body: { order_id: order.id },
+          headers: {
+            Authorization: `Bearer ${accessToken}`
+          }
         });
 
         if (error) {

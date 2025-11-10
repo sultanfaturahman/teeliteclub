@@ -307,8 +307,21 @@ const FinishPayment = () => {
     try {
       setChangeMethodLoading(true);
 
+      const { data: session } = await supabase.auth.getSession();
+      const accessToken = session.session?.access_token;
+
+      if (!accessToken) {
+        toast.error('Sesi berakhir, silakan login kembali.');
+        navigate('/auth');
+        setChangeMethodLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('recover-payment-url', {
-        body: { order_id: orderDetails.id }
+        body: { order_id: orderDetails.id },
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
       });
 
       if (error) {
