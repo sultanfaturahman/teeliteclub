@@ -523,7 +523,7 @@ const FinishPayment = () => {
                     
                     {isPending && (
                       <>
-                        <div className="flex flex-col gap-3 sm:flex-row">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                           {canCancelOrder && (
                             <Button
                               onClick={handleCancelOrder}
@@ -539,7 +539,7 @@ const FinishPayment = () => {
                               ) : (
                                 <>
                                   <Ban className="w-4 h-4 mr-2" />
-                                  Batalkan Pesanan & Checkout Ulang
+                                  Batal & Order Ulang
                                 </>
                               )}
                             </Button>
