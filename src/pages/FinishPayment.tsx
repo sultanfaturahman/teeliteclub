@@ -4,12 +4,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, XCircle, Clock, AlertTriangle, Package, ArrowRight, Home, RefreshCw, Loader2, RotateCcw } from "lucide-react";
+import { CheckCircle, XCircle, Clock, AlertTriangle, Package, ArrowRight, Home, RefreshCw, Loader2, Ban } from "lucide-react";
 import { toast } from "sonner";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { ensureSnapLoaded } from "@/utils/midtrans";
-import { getFreshAccessToken } from "@/utils/accessToken";
+import { cancelUserOrder } from "@/utils/orderActions";
 
 interface PaymentStatus {
   order_id: string;
@@ -49,7 +48,7 @@ const FinishPayment = () => {
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [changeMethodLoading, setChangeMethodLoading] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
   const [activeMidtransOrderId, setActiveMidtransOrderId] = useState<string | null>(orderId);
 
   useEffect(() => {
@@ -294,107 +293,27 @@ const FinishPayment = () => {
     }
   };
 
-  const handleChangePaymentMethod = async () => {
-    if (!orderDetails || !paymentStatus) {
+  const handleCancelOrder = async () => {
+    if (!orderDetails) {
       toast.error('Data pesanan belum lengkap.');
       return;
     }
 
-    const confirmed = window.confirm('Ganti metode pembayaran? Sesi pembayaran sebelumnya akan dibatalkan.');
+    const confirmed = window.confirm('Batalkan pesanan ini? Anda dapat membuat pesanan baru untuk memilih metode pembayaran lain.');
     if (!confirmed) {
       return;
     }
 
     try {
-      setChangeMethodLoading(true);
-
-      let accessToken: string;
-      try {
-        accessToken = await getFreshAccessToken();
-      } catch (tokenError) {
-        toast.error('Sesi berakhir, silakan login kembali.');
-        navigate('/auth');
-        setChangeMethodLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase.functions.invoke('recover-payment-url', {
-        body: { order_id: orderDetails.id },
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
-      });
-
-      if (error) {
-        throw new Error(error.message || 'Gagal membuat sesi pembayaran baru.');
-      }
-
-      const midtransOrderId = data?.midtrans_order_id ?? orderDetails.order_number ?? orderId;
-      if (midtransOrderId) {
-        setActiveMidtransOrderId(midtransOrderId);
-      }
-
-      const paymentToken = data?.token;
-      const paymentUrl = data?.payment_url;
-      const targetMidtransOrderId = midtransOrderId ?? null;
-
-      if (paymentToken) {
-        await ensureSnapLoaded();
-
-        if (!window.snap?.pay) {
-          throw new Error('Midtrans Snap belum siap.');
-        }
-
-        window.snap.pay(paymentToken, {
-          onSuccess: async () => {
-            toast.success('Pembayaran berhasil dikonfirmasi!');
-            try {
-              await verifyWithBackend({ forceRefresh: true, midtransOrderId: targetMidtransOrderId });
-            } finally {
-              setChangeMethodLoading(false);
-            }
-          },
-          onPending: async () => {
-            toast.info('Pembayaran sedang diproses.');
-            try {
-              await verifyWithBackend({ forceRefresh: true, midtransOrderId: targetMidtransOrderId });
-            } finally {
-              setChangeMethodLoading(false);
-            }
-          },
-          onError: async (snapError) => {
-            console.error('Midtrans Snap error:', snapError);
-            toast.error('Pembayaran tidak dapat diproses. Silakan coba lagi.');
-            try {
-              await verifyWithBackend({ forceRefresh: true, midtransOrderId: targetMidtransOrderId });
-            } finally {
-              setChangeMethodLoading(false);
-            }
-          },
-          onClose: async () => {
-            toast.info('Jendela pembayaran ditutup. Anda dapat mencoba lagi jika diperlukan.');
-            try {
-              await verifyWithBackend({ forceRefresh: true, midtransOrderId: targetMidtransOrderId });
-            } finally {
-              setChangeMethodLoading(false);
-            }
-          }
-        });
-        return;
-      }
-
-      if (paymentUrl) {
-        toast.info('Mengarahkan ke halaman pembayaran baru.');
-        setChangeMethodLoading(false);
-        window.location.href = paymentUrl;
-        return;
-      } else {
-        throw new Error('Link pembayaran baru tidak tersedia.');
-      }
-    } catch (changeError) {
-      console.error('Error changing payment method:', changeError);
-      toast.error(changeError instanceof Error ? changeError.message : 'Gagal memulai ulang pembayaran.');
-      setChangeMethodLoading(false);
+      setCancelLoading(true);
+      await cancelUserOrder(orderDetails.id, user?.id || undefined);
+      toast.success('Pesanan dibatalkan. Silakan buat pesanan baru untuk memilih metode pembayaran lain.');
+      navigate('/shop');
+    } catch (cancelError) {
+      console.error('Error cancelling order:', cancelError);
+      toast.error(cancelError instanceof Error ? cancelError.message : 'Gagal membatalkan pesanan.');
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -456,7 +375,7 @@ const FinishPayment = () => {
     ? Math.round(Number(paymentStatus.gross_amount)) === Math.round(orderDetails?.total ?? Number.NaN)
     : true;
   const orderNotSettled = Boolean(orderDetails && !['paid', 'shipped', 'delivered'].includes(orderDetails.status));
-  const canChangePaymentMethod = Boolean(orderDetails && paymentStatus && isPendingOrChallenge && orderNotSettled && amountMatches);
+  const canCancelOrder = Boolean(orderNotSettled);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -563,6 +482,9 @@ const FinishPayment = () => {
                         Pembayaran Anda sedang diverifikasi. Proses ini biasanya memakan waktu beberapa menit hingga 24 jam. 
                         Kami akan mengirimkan notifikasi email setelah pembayaran dikonfirmasi.
                       </p>
+                      <p className="text-xs text-blue-700 mt-2">
+                        Bila ingin mengganti metode pembayaran, batalkan pesanan ini terlebih dahulu lalu lakukan checkout ulang.
+                      </p>
                     </div>
                   )}
 
@@ -600,35 +522,43 @@ const FinishPayment = () => {
                     )}
                     
                     {isPending && (
-                      <div className="flex flex-col gap-3 sm:flex-row">
-                        {canChangePaymentMethod && (
-                          <Button
-                            onClick={handleChangePaymentMethod}
-                            className="flex-1"
-                            disabled={changeMethodLoading}
-                          >
-                            {changeMethodLoading ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Menyiapkan Pembayaran...
-                              </>
-                            ) : (
-                              <>
-                                <RotateCcw className="w-4 h-4 mr-2" />
-                                Ubah Metode Pembayaran
-                              </>
-                            )}
+                      <>
+                        <div className="flex flex-col gap-3 sm:flex-row">
+                          {canCancelOrder && (
+                            <Button
+                              onClick={handleCancelOrder}
+                              className="flex-1"
+                              variant="destructive"
+                              disabled={cancelLoading}
+                            >
+                              {cancelLoading ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Membatalkan Pesanan...
+                                </>
+                              ) : (
+                                <>
+                                  <Ban className="w-4 h-4 mr-2" />
+                                  Batalkan Pesanan & Checkout Ulang
+                                </>
+                              )}
+                            </Button>
+                          )}
+                          <Button onClick={() => navigate('/orders')} className="flex-1">
+                            <Package className="w-4 h-4 mr-2" />
+                            Pantau Status Pesanan
                           </Button>
+                          <Button variant="outline" onClick={() => checkPaymentStatus()} className="flex-1">
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Refresh Status
+                          </Button>
+                        </div>
+                        {canCancelOrder && (
+                          <p className="text-xs text-muted-foreground">
+                            Ingin menggunakan metode pembayaran berbeda? Batalkan pesanan terlebih dahulu, lalu buat pesanan baru saat checkout.
+                          </p>
                         )}
-                        <Button onClick={() => navigate('/orders')} className="flex-1">
-                          <Package className="w-4 h-4 mr-2" />
-                          Pantau Status Pesanan
-                        </Button>
-                        <Button variant="outline" onClick={() => checkPaymentStatus()} className="flex-1">
-                          <RefreshCw className="w-4 h-4 mr-2" />
-                          Refresh Status
-                        </Button>
-                      </div>
+                      </>
                     )}
                     
                     {isFailed && (
