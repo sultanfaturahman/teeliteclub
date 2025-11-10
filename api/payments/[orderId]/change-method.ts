@@ -72,8 +72,20 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 
       const { data: order, error: orderError } = await serviceClient
         .from('orders')
-        .select('id, order_number, status, total, payment_method, shipping_method, shipping_address, nama_pembeli,
-  email_pembeli, telepon_pembeli, tracking_number, payment_url')
+        .select(`
+          id,
+          order_number,
+          status,
+          total,
+          payment_method,
+          shipping_method,
+          shipping_address,
+          nama_pembeli,
+          email_pembeli,
+          telepon_pembeli,
+          tracking_number,
+          payment_url
+        `)
         .eq('id', orderId)
         .eq('user_id', user.id)
         .single();
